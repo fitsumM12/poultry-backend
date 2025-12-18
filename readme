@@ -1,0 +1,46 @@
+# CC-backend
+
+This is the backend service for the CC-App-Dockerized project.
+
+## Features
+
+- RESTful API for core application logic
+- Dockerized for easy deployment
+- Built with best practices for scalability and maintainability
+
+## Getting Started
+
+### Prerequisites
+
+- Docker
+- Docker Compose
+
+### Running the Backend
+
+1. Clone the repository.
+2. Navigate to the backend directory:
+    ```
+    cd CC-backend
+    ```
+3. Build and start the backend service:
+    ```
+    docker-compose up --build
+    ```
+
+### Environment Variables
+
+Configure environment variables in a `.env` file as needed.
+
+## Project Structure
+
+- `src/` - Source code
+- `Dockerfile` - Docker build instructions
+- `docker-compose.yml` - Multi-container orchestration
+
+## API Documentation
+
+API endpoints and usage details can be found in the `docs/` directory or by running the service and accessing `/docs` if available.
+
+## License
+
+This project is licensed under the MIT License.
