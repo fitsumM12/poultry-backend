@@ -10,11 +10,6 @@ class HealthyInstitution(models.Model):
         return self.name
 
 class usersDetail(AbstractUser):
-    GENDER_CHOICES = [
-        ('Male', 'Male'),
-        ('Female', 'Female'),
-        ('Other', 'Other'),
-    ]
     STATUS_CHOICES = [
         ('PENDING', 'Pending'),
         ('APPROVED', 'Approved'),
@@ -26,15 +21,14 @@ class usersDetail(AbstractUser):
         ('USER', 'User') 
     ]
     birthday = models.DateField(blank=True, null=True)
-    gender = models.CharField(max_length=110, blank=True, null=True, choices=GENDER_CHOICES)
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=255)
-    mobile = models.CharField(max_length=20, blank=True, null=True)
+    Phone_Number = models.CharField(max_length=20, blank=True, null=True)
     region = models.CharField(max_length=100, blank=True, null=True)
     zone = models.CharField(max_length=100, blank=True, null=True)
     kebele = models.CharField(max_length=100, blank=True, null=True)
-    hospital = models.CharField(max_length=100, blank=True, null=True)
-    health_institution = models.ForeignKey(HealthyInstitution, on_delete=models.CASCADE, null=True, blank=True)
+    farm = models.CharField(max_length=100, blank=True, null=True)
+    farm_institution = models.ForeignKey(HealthyInstitution, on_delete=models.CASCADE, null=True, blank=True)
     image = models.CharField(max_length=100, blank=True, null=True)
     passport = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=12, blank=True, null=True, choices=STATUS_CHOICES)

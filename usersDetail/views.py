@@ -4,7 +4,9 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.hashers import check_password
 from rest_framework.exceptions import AuthenticationFailed
-from .models import usersDetail, HealthyInstitution
+# from .models import usersDetail, HealthyInstitution
+from usersDetail.models import usersDetail, HealthyInstitution
+
 from .serializers import UserDetailSerializer, HealthyInstitutionSerializer
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes

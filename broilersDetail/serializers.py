@@ -2,20 +2,29 @@ from rest_framework import serializers
 from .models import *
 
 from django.utils import timezone
-
-class PatientsDetailSerializer(serializers.ModelSerializer):
+class UsersDetailSerializer(serializers.ModelSerializer):
     class Meta:
-        model = patientsDetail
+        model = usersDetail
+        fields = "__all__"
+class FarmInstitutionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HealthyInstitution
+        fields = "__all__"
+class BroilersDetailSerializer(serializers.ModelSerializer):
+    farm_institution = FarmInstitutionSerializer(read_only=True)
+    supervisor_id = UsersDetailSerializer(read_only=True)
+    class Meta:
+        model = broilersDetail
         fields = '__all__'
 
     def create(self, validated_data):
         validated_data['record_date'] = timezone.now().date() 
-        validated_data['gender'] = "Female"
+        # validated_data['breed'] = "Female"
         return super().create(validated_data)
 
-class patientsImageAndPredictionSerializer(serializers.ModelSerializer):
+class BroilersImageAndPredictionSerializer(serializers.ModelSerializer):
     class Meta:
-        model = patientsImageAndPrediction
+        model = broilersImageAndPrediction
         fields = '__all__'
     def create(self, validated_data):
         validated_data['record_date'] = timezone.now().date() 
@@ -30,10 +39,10 @@ class PhysicianDecisionSerializer(serializers.ModelSerializer):
         validated_data['created'] = timezone.now().date() 
         return super().create(validated_data)
 
-class MonthlyPatientCountSerializer(serializers.Serializer):
+class MonthlyBroilerCountSerializer(serializers.Serializer):
     month = serializers.CharField()
     year = serializers.IntegerField()
-    patient_count = serializers.IntegerField()
+    broiler_count = serializers.IntegerField()
 
 
 class MonthlyPredictionSerializer(serializers.Serializer):

@@ -1,1 +1,6 @@
 env/
+
+# Ignore Django migration files but keep __init__.py
+**/migrations/*.py
+**/migrations/*.pyc
+!**/migrations/__init__.py
