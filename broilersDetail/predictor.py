@@ -1,106 +1,36 @@
-# ml/models.py
+# predictor.py
 import os
 import tensorflow as tf
-from tensorflow.keras.layers import (
-    Input, Dense, GlobalAveragePooling2D, Dropout
-)
-from tensorflow.keras.models import Model
 from django.conf import settings
 
+# Path to your saved full model (.keras or SavedModel directory)
+MODEL_PATH = r"C:\Poultry\Model\newmodel3.keras"
 
-# =========================
-# CREATE MODEL (EfficientNet)
-# =========================
-# def create_model(num_classes=3, img_size=224):
-#     inputs = Input(shape=(img_size, img_size, 3), name="input_image")
+# Model class names
+CLASS_NAMES = ["Newcastle", "Normal", "Other abnormal"]
 
-#     base_model = tf.keras.applications.EfficientNetB0(
-#         input_tensor=inputs,
-#         weights="imagenet",
-#         include_top=False
-#     )
+# Global variable to hold the model after loading once
+_model = None
 
-#     # Freeze backbone (optional but recommended for inference)
-#     base_model.trainable = False
-
-#     x = base_model.output
-#     x = GlobalAveragePooling2D(name="gap")(x)
-#     x = Dense(128, activation="relu")(x)
-#     x = Dropout(0.3)(x)
-
-#     outputs = Dense(num_classes, activation="softmax")(x)
-
-#     model = Model(inputs=inputs, outputs=outputs, name="BroilerDiseaseEfficientNet")
-#     return model
-
-
-# =========================
-# CREATE MODEL (MobileNetV2)
-# ==========================
-def create_model(num_classes=3, img_size=224):
-        inputs = Input(shape=(img_size, img_size, 3), name="input_image")
-
-        base_model = tf.keras.applications.mobilenetv2(
-            input_tensor=inputs,
-            weights="imagenet",
-            include_top=False, alpha=0.35
-        )
-
-        # Freeze backbone (optional but recommended for inference)
-        # base_model.trainable = False
-
-        x = base_model.get_layer('block7a_project_conv').output
-        x = GlobalAveragePooling2D(name='gap')(x)
-        output = Dense(3,activation='softmax')(x)
-        model = tf.keras.Model(inputs,output)
-        return model
-
-# # =========================
-# # LOAD TRAINED WEIGHTS
-# # =========================
-# def load_weights(model):
-#     """
-#     Place your trained EfficientNet weights inside:
-#     MEDIA_ROOT_MODEL/broiler_efficientnet.h5
-#     """
-#     weights_path = os.path.join(
-#         settings.MEDIA_ROOT_MODEL,
-#         "broiler_efficientnet.h5"
-#     )
-#     model.load_weights(weights_path)
-
-
-# =========================
-# LOAD TRAINED WEIGHTS
-# =========================
-def load_weights(model):
+def get_model():
     """
-    Place your trained MobileNetV2 weights inside:
-    MEDIA_ROOT_MODEL/EfficientNet.h5
+    Load the full model only once. 
+    Returns the model instance for prediction.
     """
-    weights_path = os.path.join(
-        settings.MEDIA_ROOT_MODEL,
-        "broiler_model_tf"
-    )
-    model.load_weights(weights_path)
+    global _model
+    if _model is None:
+        # Load the full Keras 3 model
+        _model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+    return _model
 
-
-# =========================
-# # PREDICT
-# # =========================
-# def predict(model, image_data):
-#     """
-#     image_data shape: (1, 224, 224, 3)
-#     """
-#     image_data = tf.keras.applications.efficientnet.preprocess_input(image_data)
-#     predictions = model.predict(image_data)
-#     return predictions
-# PREDICT
-# =========================
-def predict(model, image_data):
+def predict_image(img_array):
     """
-    image_data shape: (1, 224, 224, 3)
+    Predict the class for a preprocessed image array.
+    
+    img_array: numpy array of shape (1, 224, 224, 3)
+    Returns: predicted class name and full predictions array
     """
-    image_data = tf.keras.applications.mobilenetv2.preprocess_input(image_data)
-    predictions = model.predict(image_data)
-    return predictions
+    model = get_model()
+    preds = model.predict(img_array)
+    pred_index = int(tf.argmax(preds, axis=1)[0])
+    return CLASS_NAMES[pred_index], preds

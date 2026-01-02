@@ -16,15 +16,16 @@ import cv2
 from django.conf import settings
 from PIL import Image
 import numpy as np
-from .predictor import create_model, load_weights
+# from .predictor import create_model, load_weights
 from django.contrib.auth.decorators import login_required
-from .preprocess import circle_crop
+# from .preprocess import circle_crop
 from django.http import JsonResponse
 from django.db.models import Count
 from django.db.models.functions import TruncMonth
 from .models import broilersDetail
 import tensorflow as tf
-
+from broilersDetail.predictor import get_model, predict_image, CLASS_NAMES   # ✅ GOOD
+import tensorflow as tf
 @api_view(['GET'])
 @permission_classes([])
 def fetch_broilers_api(request):
@@ -78,44 +79,59 @@ def add_broiler_api(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_raw_generate_cam_and_predictions(request):
+
     if 'image' not in request.FILES:
         return Response({'error': 'No image file found'}, status=400)
 
-    image_file = request.FILES.get('image')
-    image_name = image_file.name  
+    # -----------------------------
+    # Save uploaded file
+    # -----------------------------
+    image_file = request.FILES['image']
+    image_name = image_file.name
     image_path = os.path.join(settings.MEDIA_ROOT_RAW, image_name)
     os.makedirs(os.path.dirname(image_path), exist_ok=True)
     with open(image_path, 'wb') as f:
         for chunk in image_file.chunks():
             f.write(chunk)
 
-    # Load and preprocess image
+    # -----------------------------
+    # Load + preprocess (SAME AS TRAINING)
+    # -----------------------------
     img = image.load_img(image_path, target_size=(224, 224))
     img_array = image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0)
-    img_array = img_array / 255.0
+    img_array = np.expand_dims(img_array, axis=0).astype("float32")
 
-    # Load the exported Keras 3 SavedModel
-    model_path = r"C:\Poultry\Model\poultry1_model_tf"
-    model = tf.keras.models.load_model(model_path)
-    CLASS_NAMES = ["Newcastle", "Normal", "Other abnormal"]
+    # ⚠️ IMPORTANT — use MobileNetV2 preprocessing
+    # img_array = tf.keras.applications.mobilenet_v2.preprocess_input(img_array)
 
-    # Use the 'serve' signature
-    infer = model.signatures["serve"]
-    img_tensor = tf.convert_to_tensor(img_array, dtype=tf.float32)
-    prediction = infer(input_image=img_tensor)
-    prediction_array = prediction["output_0"].numpy()
+    # -----------------------------
+     # Predict
+    # -----------------------------
+    pred_class, preds = predict_image(img_array)
+    confidence = float(np.max(preds))
 
-    pred_index = np.argmax(prediction_array, axis=1)[0]
-    pred_class = CLASS_NAMES[pred_index]
+    return Response({
+        "image_url": image_name,
+        "predicted_class": pred_class,
+        "confidence": confidence,
+        "predictions": preds.tolist()
+    })
 
-    response_data = {
-        'image_url': image_name,
-        'predicted_class': pred_class,
-        'predictions': prediction_array.tolist()
-    }
-    return Response(response_data, status=200)
+    # # Predict
+    # # -----------------------------
+    # model = get_model()        # ✅ loads once only
+    # preds = model.predict(img_array)
 
+    # pred_index = int(np.argmax(preds, axis=1)[0])
+    # pred_class = CLASS_NAMES[pred_index]
+    # confidence = float(preds[0][pred_index])
+
+    # return Response({
+    #     "image_url": image_name,
+    #     "predicted_class": pred_class,
+    #     "confidence": confidence,
+    #     "predictions": preds.tolist()
+    # })
 
 
 
