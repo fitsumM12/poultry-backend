@@ -40,13 +40,18 @@ def fetch_broilers_supervisor_api(request, pk):
     serializer = BroilersDetailSerializer(broilers, many=True)
     return Response(serializer.data)
 
+# @api_view(['GET'])
+# @permission_classes([])
+# def fetch_broiler_api(request, pk):
+#     broiler = broilersDetail.objects.get(pk=pk)
+#     serializer = BroilersDetailSerializer(broiler)
+#     return Response(serializer.data)
 @api_view(['GET'])
-@permission_classes([])
-def fetch_broiler_api(request, pk):
-    broiler = broilersDetail.objects.get(pk=pk)
-    serializer = BroilersDetailSerializer(broiler)
+@permission_classes([])  # you can add permissions if needed
+def fetch_broiler_api(request):
+    broilers = broilersDetail.objects.all()  # Get all records
+    serializer = BroilersDetailSerializer(broilers, many=True)  # note many=True
     return Response(serializer.data)
-
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_broiler_api(request, pk):
