@@ -40,18 +40,13 @@ def fetch_broilers_supervisor_api(request, pk):
     serializer = BroilersDetailSerializer(broilers, many=True)
     return Response(serializer.data)
 
-# @api_view(['GET'])
-# @permission_classes([])
-# def fetch_broiler_api(request, pk):
-#     broiler = broilersDetail.objects.get(pk=pk)
-#     serializer = BroilersDetailSerializer(broiler)
-#     return Response(serializer.data)
 @api_view(['GET'])
-@permission_classes([])  # you can add permissions if needed
-def fetch_broiler_api(request):
-    broilers = broilersDetail.objects.all()  # Get all records
-    serializer = BroilersDetailSerializer(broilers, many=True)  # note many=True
+@permission_classes([])
+def fetch_broiler_api(request, pk):
+    broiler = broilersDetail.objects.get(pk=pk)
+    serializer = BroilersDetailSerializer(broiler)
     return Response(serializer.data)
+
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_broiler_api(request, pk):
@@ -84,6 +79,12 @@ def add_broiler_api(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_raw_generate_cam_and_predictions(request):
+    # --- FIX START: Define broiler_id immediately ---
+    broiler_id = request.data.get('broiler_id') 
+    
+    if not broiler_id:
+        return Response({'error': 'No broiler_id provided in request'}, status=400)
+    # --- FIX END ---
 
     if 'image' not in request.FILES:
         return Response({'error': 'No image file found'}, status=400)
@@ -114,12 +115,28 @@ def upload_raw_generate_cam_and_predictions(request):
     # -----------------------------
     pred_class, preds = predict_image(img_array)
     confidence = float(np.max(preds))
+    # --- THE FIX: SAVE TO DATABASE ---
+    try:
+        # Get the broiler object
+        broiler_obj = broilersDetail.objects.get(id=broiler_id)
+        
+        # Create the prediction record
+        prediction_record = broilersImageAndPrediction.objects.create(
+            broiler_id=broiler_obj,
+            health_status=pred_class,  # This saves "Normal" or "Newcastle"
+            image_url=image_name,
+            supervisor_id=request.user # Records who did the prediction
+        )
+    except broilersDetail.DoesNotExist:
+        return Response({'error': 'Broiler not found'}, status=404)
+    # ---------------------------------
 
     return Response({
         "image_url": image_name,
         "predicted_class": pred_class,
         "confidence": confidence,
-        "predictions": preds.tolist()
+        "predictions": preds.tolist(),
+        "db_record_id": prediction_record.id
     })
 
     # # Predict
@@ -168,46 +185,103 @@ def add_physician_decision(request):
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=400)
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def count_broilers_json(request):
+#     Newcastle_criteria = 'Newcastle'
+#     Normal_criteria = 'Normal'
+#     Other_abnormal_criteria = 'Other abnormal' 
+#     abnormal_broilers_ids = broilersImageAndPrediction.objects.filter(
+#         Q(health_status=Newcastle_criteria) | 
+#         Q(health_status=Other_abnormal_criteria) 
+#     ).exclude(
+#         Q(health_status='Prediction data is missing')
+#     ).values_list('broiler_id', flat=True).distinct()
+
+#     abnormal_broilers_count = broilersImageAndPrediction.objects.filter(broiler_id__in=abnormal_broilers_ids).count()
+
+#     normal_broilers_ids = broilersImageAndPrediction.objects.filter(
+#         Q(health_status=Normal_criteria) 
+#     ).exclude(
+#         Q(health_status='Prediction data is missing')
+#     ).exclude(
+#         broiler_id__in=abnormal_broilers_ids                
+#     ).values_list('broiler_id', flat=True).distinct()
+
+#     normal_broilers_count = broilersImageAndPrediction.objects.filter(broiler_id__in=normal_broilers_ids).count()
+
+#     total_broilers_count = broilersImageAndPrediction.objects.count()
+
+#     data = {
+#         'normal_broilers_count': normal_broilers_count,
+#         'abnormal_broilers_count': abnormal_broilers_count,
+#         'total_broilers_count': total_broilers_count,
+#     }
+#     return JsonResponse(data)
+
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def count_broilers_json(request):
+#     # 1. Use iexact to avoid case-sensitivity issues
+#     # 2. Simplify the query to hit the database fewer times
+    
+#     # Get IDs for Abnormal broilers
+#     abnormal_broilers_ids = broilersImageAndPrediction.objects.filter(
+#         Q(health_status__iexact='Newcastle') | 
+#         Q(health_status__iexact='Other abnormal')
+#     ).values_list('broiler_id', flat=True).distinct()
+
+#     abnormal_broilers_count = abnormal_broilers_ids.count()
+
+#     # Get IDs for Normal broilers (excluding those already marked abnormal)
+#     normal_broilers_count = broilersImageAndPrediction.objects.filter(
+#         health_status__iexact='Normal'
+#     ).exclude(
+#         broiler_id__in=abnormal_broilers_ids
+#     ).values_list('broiler_id', flat=True).distinct().count()
+
+#     # Total unique broilers in the system
+#     total_broilers_count = broilersDetail.objects.count()
+
+#     data = {
+#         'normal_broilers_count': normal_broilers_count,
+#         'abnormal_broilers_count': abnormal_broilers_count,
+#         'total_broilers_count': total_broilers_count,
+#     }
+#     return JsonResponse(data)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def count_broilers_json(request):
-    Newcastle_criteria = 'Newcastle'
-    Normal_criteria = 'Normal'
-    Other_abnormal_criteria = 'Other abnormal' 
-    abnormal_broilers_ids = broilersImageAndPrediction.objects.filter(
-        Q(health_status=Newcastle_criteria) | 
-        Q(health_status=Other_abnormal_criteria) 
-    ).exclude(
-        Q(health_status='Prediction data is missing')
+    # Use __iexact to ensure "normal", "Normal", and "NORMAL" all match
+    # This captures everything marked as Newcastle or Other abnormal
+    abnormal_ids = broilersImageAndPrediction.objects.filter(
+        Q(health_status__iexact='Newcastle') | 
+        Q(health_status__iexact='Other abnormal')
     ).values_list('broiler_id', flat=True).distinct()
 
-    abnormal_broilers_count = broilersImageAndPrediction.objects.filter(broiler_id__in=abnormal_broilers_ids).count()
+    abnormal_count = abnormal_ids.count()
 
-    normal_broilers_ids = broilersImageAndPrediction.objects.filter(
-        Q(health_status=Normal_criteria) 
+    # This captures everything marked exactly as Normal
+    normal_count = broilersImageAndPrediction.objects.filter(
+        health_status__iexact='Normal'
     ).exclude(
-        Q(health_status='Prediction data is missing')
-    ).exclude(
-        broiler_id__in=abnormal_broilers_ids                
-    ).values_list('broiler_id', flat=True).distinct()
+        broiler_id__in=abnormal_ids
+    ).values_list('broiler_id', flat=True).distinct().count()
 
-    normal_broilers_count = broilersImageAndPrediction.objects.filter(broiler_id__in=normal_broilers_ids).count()
+    # The total comes from your main records table
+    total_count = broilersDetail.objects.count()
 
-    total_broilers_count = broilersImageAndPrediction.objects.count()
-
-    data = {
-        'normal_broilers_count': normal_broilers_count,
-        'abnormal_broilers_count': abnormal_broilers_count,
-        'total_broilers_count': total_broilers_count,
-    }
-    return JsonResponse(data)
-
+    return JsonResponse({
+        'normal_broilers_count': normal_count,
+        'abnormal_broilers_count': abnormal_count,
+        'total_broilers_count': total_count,
+    })
 
 @api_view(['GET'])
 @permission_classes([])
 def breed_count(request):
-    male_count = broilerDetail.objects.filter(breed__iexact='male').count()
-    female_count = broilerDetail.objects.filter(breed__iexact='female').count()
+    male_count = broilersDetail.objects.filter(breed__iexact='male').count()
+    female_count = broilersDetail.objects.filter(breed__iexact='female').count()
     data = {
         'male_count': male_count,
         'female_count': female_count
