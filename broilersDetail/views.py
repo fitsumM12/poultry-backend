@@ -125,7 +125,7 @@ def upload_raw_generate_cam_and_predictions(request):
             broiler_id=broiler_obj,
             health_status=pred_class,  # This saves "Normal" or "Newcastle"
             image_url=image_name,
-            supervisor_id=request.user # Records who did the prediction
+            supervisor_id=request.user.id # Records who did the prediction
         )
     except broilersDetail.DoesNotExist:
         return Response({'error': 'Broiler not found'}, status=404)

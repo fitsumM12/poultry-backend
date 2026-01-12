@@ -15,11 +15,11 @@ class broilersDetail(models.Model):
     region = models.CharField(max_length=100, blank=True)
     zone = models.CharField(max_length=100, blank=True)
     kebele = models.CharField(max_length=100, blank=True)
-    supervisor_id = models.ForeignKey(usersDetail, on_delete=models.CASCADE, null=True, blank=True)
+    # supervisor_id = models.ForeignKey(usersDetail, on_delete=models.CASCADE, null=True, blank=True)
     farm_institution = models.ForeignKey(HealthyInstitution, on_delete=models.CASCADE, null=True,
     blank=True)
-  
-    def __str__(self):
+    supervisor = models.ForeignKey(usersDetail, on_delete=models.CASCADE, null=True, blank=True,related_name='broiler_submissions')  
+def __str__(self):
         return f"{self.farmer_name} {self.farm_name}"
 
 
@@ -29,7 +29,7 @@ class broilersImageAndPrediction(models.Model):
     health_status = models.CharField(max_length=200, blank=True)
     record_date = models.DateField(default=timezone.now)
     broiler_id = models.ForeignKey(broilersDetail, on_delete=models.CASCADE)  
-    supervisor_id = models.ForeignKey(usersDetail, on_delete=models.CASCADE)
+    supervisor = models.ForeignKey(usersDetail, on_delete=models.CASCADE, null=True, blank=True)
     def __str__(self):
         return str(self.broiler_id_id)
 

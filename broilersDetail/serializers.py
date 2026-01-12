@@ -12,10 +12,20 @@ class FarmInstitutionSerializer(serializers.ModelSerializer):
         fields = "__all__"
 class BroilersDetailSerializer(serializers.ModelSerializer):
     farm_institution = FarmInstitutionSerializer(read_only=True)
-    supervisor_id = UsersDetailSerializer(read_only=True)
+    # supervisor_id = UsersDetailSerializer(read_only=True)
+    supervisor = UsersDetailSerializer(read_only=True)
+    supervisor_id = serializers.PrimaryKeyRelatedField(
+        queryset=usersDetail.objects.all(), 
+        source='supervisor', 
+        write_only=True, 
+        required=False,
+        allow_null=True
+    )
+
     class Meta:
         model = broilersDetail
         fields = '__all__'
+        
 
     def create(self, validated_data):
         validated_data['record_date'] = timezone.now().date() 
@@ -23,6 +33,13 @@ class BroilersDetailSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 class BroilersImageAndPredictionSerializer(serializers.ModelSerializer):
+    # This maps the "supervisor_id" key from React to the "supervisor" field in the DB
+    supervisor_id = serializers.PrimaryKeyRelatedField(
+        queryset=usersDetail.objects.all(), 
+        source='supervisor', 
+        write_only=True, 
+        required=False
+    )
     class Meta:
         model = broilersImageAndPrediction
         fields = '__all__'
