@@ -33,6 +33,12 @@ class BroilersDetailSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 class BroilersImageAndPredictionSerializer(serializers.ModelSerializer):
+    # 1. Map the DB field 'image_url' to the name 'broiler_image' for React
+    # broiler_image = serializers.CharField(source='image_url', read_only=True)
+    broiler_image = serializers.SerializerMethodField()
+    
+    # 2. Map the DB field 'health_status' to 'image_prediction' for React
+    image_prediction = serializers.CharField(source='health_status', read_only=True)
     # This maps the "supervisor_id" key from React to the "supervisor" field in the DB
     supervisor_id = serializers.PrimaryKeyRelatedField(
         queryset=usersDetail.objects.all(), 
@@ -43,7 +49,16 @@ class BroilersImageAndPredictionSerializer(serializers.ModelSerializer):
     class Meta:
         model = broilersImageAndPrediction
         fields = '__all__'
+    # YOU MUST ADD THIS FUNCTION
+    def get_broiler_image(self, obj):
+        if obj.broiler_image:
+            # This points to the /media/raw/ folder seen in your file structure
+            return f"/media/raw/{obj.broiler_image}"
+        return None
     def create(self, validated_data):
+        # Ensure health_status is set to Pending if not provided
+        if 'health_status' not in validated_data:
+            validated_data['health_status'] = "Pending..."
         validated_data['record_date'] = timezone.now().date() 
         return super().create(validated_data)
     

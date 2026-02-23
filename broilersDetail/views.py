@@ -124,7 +124,7 @@ def upload_raw_generate_cam_and_predictions(request):
         prediction_record = broilersImageAndPrediction.objects.create(
             broiler_id=broiler_obj,
             health_status=pred_class,  # This saves "Normal" or "Newcastle"
-            image_url=image_name,
+            broiler_image=image_name,
             supervisor_id=request.user.id # Records who did the prediction
         )
     except broilersDetail.DoesNotExist:
@@ -166,16 +166,33 @@ def add_broilers_image_and_prediction(request):
         return Response({'id': broiler_health_status.id}, status=201)
     return Response(serializer.errors, status=400)
 
+# @api_view(['GET'])
+# @permission_classes([IsAuthenticated])
+# def get_broiler_by_id(request, id):
+#     broilers = broilersImageAndPrediction.objects.filter(broiler_id=id)
+
+#     if broilers.exists():
+#         serializer = BroilersImageAndPredictionSerializer(broilers, many=True) 
+#         return Response(serializer.data, status=200)
+#     else:
+#         return Response({'error': 'Broiler not found'}, status=404)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_broiler_by_id(request, id):
-    broilers = broilersImageAndPrediction.objects.filter(broiler_id=id)
+def get_broiler_latest_prediction(request, id):
+    prediction = (
+        broilersImageAndPrediction.objects
+        .filter(broiler_id=id)
+        .order_by('-record_date')
+        # .first()
+    )
 
-    if broilers.exists():
-        serializer = BroilersImageAndPredictionSerializer(broilers, many=True) 
-        return Response(serializer.data, status=200)
-    else:
-        return Response({'error': 'Broiler not found'}, status=404)
+    if not prediction:
+        return Response({'error': 'No prediction found'}, status=404)
+
+    serializer = BroilersImageAndPredictionSerializer(prediction, many=True)
+    return Response(serializer.data)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -185,70 +202,7 @@ def add_physician_decision(request):
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=400)
-# @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
-# def count_broilers_json(request):
-#     Newcastle_criteria = 'Newcastle'
-#     Normal_criteria = 'Normal'
-#     Other_abnormal_criteria = 'Other abnormal' 
-#     abnormal_broilers_ids = broilersImageAndPrediction.objects.filter(
-#         Q(health_status=Newcastle_criteria) | 
-#         Q(health_status=Other_abnormal_criteria) 
-#     ).exclude(
-#         Q(health_status='Prediction data is missing')
-#     ).values_list('broiler_id', flat=True).distinct()
 
-#     abnormal_broilers_count = broilersImageAndPrediction.objects.filter(broiler_id__in=abnormal_broilers_ids).count()
-
-#     normal_broilers_ids = broilersImageAndPrediction.objects.filter(
-#         Q(health_status=Normal_criteria) 
-#     ).exclude(
-#         Q(health_status='Prediction data is missing')
-#     ).exclude(
-#         broiler_id__in=abnormal_broilers_ids                
-#     ).values_list('broiler_id', flat=True).distinct()
-
-#     normal_broilers_count = broilersImageAndPrediction.objects.filter(broiler_id__in=normal_broilers_ids).count()
-
-#     total_broilers_count = broilersImageAndPrediction.objects.count()
-
-#     data = {
-#         'normal_broilers_count': normal_broilers_count,
-#         'abnormal_broilers_count': abnormal_broilers_count,
-#         'total_broilers_count': total_broilers_count,
-#     }
-#     return JsonResponse(data)
-
-# @api_view(['GET'])
-# @permission_classes([IsAuthenticated])
-# def count_broilers_json(request):
-#     # 1. Use iexact to avoid case-sensitivity issues
-#     # 2. Simplify the query to hit the database fewer times
-    
-#     # Get IDs for Abnormal broilers
-#     abnormal_broilers_ids = broilersImageAndPrediction.objects.filter(
-#         Q(health_status__iexact='Newcastle') | 
-#         Q(health_status__iexact='Other abnormal')
-#     ).values_list('broiler_id', flat=True).distinct()
-
-#     abnormal_broilers_count = abnormal_broilers_ids.count()
-
-#     # Get IDs for Normal broilers (excluding those already marked abnormal)
-#     normal_broilers_count = broilersImageAndPrediction.objects.filter(
-#         health_status__iexact='Normal'
-#     ).exclude(
-#         broiler_id__in=abnormal_broilers_ids
-#     ).values_list('broiler_id', flat=True).distinct().count()
-
-#     # Total unique broilers in the system
-#     total_broilers_count = broilersDetail.objects.count()
-
-#     data = {
-#         'normal_broilers_count': normal_broilers_count,
-#         'abnormal_broilers_count': abnormal_broilers_count,
-#         'total_broilers_count': total_broilers_count,
-#     }
-#     return JsonResponse(data)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def count_broilers_json(request):
@@ -293,7 +247,7 @@ def breed_count(request):
 @permission_classes([IsAuthenticated])
 def broiler_registration_trends(request):
     trends = (
-        broilerDetail.objects
+        broilersDetail.objects
         .annotate(month=TruncMonth('record_date'))  
         .values('month')
         .annotate(count=Count('id')) 

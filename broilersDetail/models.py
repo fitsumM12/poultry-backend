@@ -25,7 +25,8 @@ def __str__(self):
 
 class broilersImageAndPrediction(models.Model):    
     id = models.AutoField(primary_key=True, unique=True)
-    image_url = models.CharField(max_length=200, blank=True)
+    broiler_image = models.ImageField(upload_to='raw/', blank=True, null=True)
+    # image_url = models.CharField(max_length=200, blank=True)
     health_status = models.CharField(max_length=200, blank=True)
     record_date = models.DateField(default=timezone.now)
     broiler_id = models.ForeignKey(broilersDetail, on_delete=models.CASCADE)  
