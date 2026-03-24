@@ -8,6 +8,12 @@ class HealthyInstitution(models.Model):
     address = models.CharField(max_length=2000, null=True, blank=True)
     def __str__(self):
         return self.name
+class Farm(models.Model):
+    name = models.CharField(max_length=200)
+    institution = models.ForeignKey(HealthyInstitution, on_delete=models.CASCADE, related_name="farms")
+
+    def __str__(self):
+        return self.name
 
 class usersDetail(AbstractUser):
     STATUS_CHOICES = [
@@ -27,8 +33,10 @@ class usersDetail(AbstractUser):
     region = models.CharField(max_length=100, blank=True, null=True)
     zone = models.CharField(max_length=100, blank=True, null=True)
     kebele = models.CharField(max_length=100, blank=True, null=True)
-    farm = models.CharField(max_length=100, blank=True, null=True)
-    farm_institution = models.ForeignKey(HealthyInstitution, on_delete=models.CASCADE, null=True, blank=True)
+    # farm = models.CharField(max_length=100, blank=True, null=True)
+    farm = models.ForeignKey(Farm, on_delete=models.SET_NULL, null=True, blank=True)
+    # farm_institution = models.ForeignKey(HealthyInstitution, on_delete=models.CASCADE, null=True, blank=True)
+    # farm_institution = models.ForeignKey(HealthyInstitution, on_delete=models.CASCADE, null=True, blank=True)
     image = models.CharField(max_length=100, blank=True, null=True)
     passport = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=12, blank=True, null=True, choices=STATUS_CHOICES)

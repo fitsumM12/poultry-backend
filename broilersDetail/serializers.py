@@ -1,4 +1,5 @@
 from rest_framework import serializers
+# from urllib3 import request
 from .models import *
 
 from django.utils import timezone
@@ -6,18 +7,17 @@ class UsersDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = usersDetail
         fields = "__all__"
-class FarmInstitutionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = HealthyInstitution
-        fields = "__all__"
+
 class BroilersDetailSerializer(serializers.ModelSerializer):
-    farm_institution = FarmInstitutionSerializer(read_only=True)
-    # supervisor_id = UsersDetailSerializer(read_only=True)
+
+    farm_name = serializers.CharField(write_only=True, required=False)
+
     supervisor = UsersDetailSerializer(read_only=True)
+
     supervisor_id = serializers.PrimaryKeyRelatedField(
-        queryset=usersDetail.objects.all(), 
-        source='supervisor', 
-        write_only=True, 
+        queryset=usersDetail.objects.all(),
+        source='supervisor',
+        write_only=True,
         required=False,
         allow_null=True
     )
@@ -25,13 +25,39 @@ class BroilersDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = broilersDetail
         fields = '__all__'
-        
+        read_only_fields = ['record_date']
 
+
+    # ✅ MUST BE INSIDE CLASS
     def create(self, validated_data):
-        validated_data['record_date'] = timezone.now().date() 
-        # validated_data['breed'] = "Female"
-        return super().create(validated_data)
+        from .models import Farm
 
+        request = self.context.get('request')
+        user = request.user
+
+        farm_name = validated_data.pop('farm_name', None)
+
+        # institution = getattr(user, 'farm_institution', None)
+
+        if not user.farm:
+            raise serializers.ValidationError(
+                "User has no institution assigned."
+            )
+        institution = user.farm.institution
+
+
+
+        farm_obj = None
+        if farm_name:
+            farm_obj, _ = Farm.objects.get_or_create(
+                name=farm_name,
+                institution=institution
+            )
+
+        validated_data['farm'] = farm_obj
+        validated_data['supervisor'] = user
+
+        return broilersDetail.objects.create(**validated_data)
 class BroilersImageAndPredictionSerializer(serializers.ModelSerializer):
     # 1. Map the DB field 'image_url' to the name 'broiler_image' for React
     # broiler_image = serializers.CharField(source='image_url', read_only=True)
@@ -59,7 +85,6 @@ class BroilersImageAndPredictionSerializer(serializers.ModelSerializer):
         # Ensure health_status is set to Pending if not provided
         if 'health_status' not in validated_data:
             validated_data['health_status'] = "Pending..."
-        validated_data['record_date'] = timezone.now().date() 
         return super().create(validated_data)
     
 
@@ -68,7 +93,6 @@ class PhysicianDecisionSerializer(serializers.ModelSerializer):
         model = PhysicianDecision
         fields = ['approval', 'feedback', 'disease', 'result'] 
     def create(self, validated_data):
-        validated_data['created'] = timezone.now().date() 
         return super().create(validated_data)
 
 class MonthlyBroilerCountSerializer(serializers.Serializer):

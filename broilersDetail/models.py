@@ -1,26 +1,28 @@
 from django.db import models
 from usersDetail.models import usersDetail, HealthyInstitution
 from django.utils import timezone
-
+from usersDetail.models import usersDetail, HealthyInstitution, Farm
 class broilersDetail(models.Model):
     id = models.AutoField(primary_key=True, unique=True)
     farmer_name = models.CharField(max_length=100)
-    farm_name = models.CharField(max_length=100)
+    farm_name = models.CharField(max_length=100, default='Unknown')
+    farm = models.ForeignKey(Farm, on_delete=models.CASCADE, null=True, blank=True)
+    # farm_name = models.CharField(max_length=100)
     hatch_date = models.DateField(null=True, blank=True)
     breed = models.CharField(max_length=110, blank=True)
     Flock_ID = models.CharField(max_length=100, blank=True)
     email = models.EmailField()
     Phone_Number = models.CharField(max_length=20,blank=True, null=True)
-    record_date = models.DateField(default=timezone.now)
+    record_date = models.DateField(default=timezone.localdate)
     region = models.CharField(max_length=100, blank=True)
     zone = models.CharField(max_length=100, blank=True)
     kebele = models.CharField(max_length=100, blank=True)
     # supervisor_id = models.ForeignKey(usersDetail, on_delete=models.CASCADE, null=True, blank=True)
     farm_institution = models.ForeignKey(HealthyInstitution, on_delete=models.CASCADE, null=True,
     blank=True)
-    supervisor = models.ForeignKey(usersDetail, on_delete=models.CASCADE, null=True, blank=True,related_name='broiler_submissions')  
+    supervisor = models.ForeignKey(usersDetail, on_delete=models.CASCADE, null=True, blank=True, related_name='broiler_submissions')  
 def __str__(self):
-        return f"{self.farmer_name} {self.farm_name}"
+        return f"{self.farmer_name} - {self.farm.name}"
 
 
 class broilersImageAndPrediction(models.Model):    
@@ -28,7 +30,8 @@ class broilersImageAndPrediction(models.Model):
     broiler_image = models.ImageField(upload_to='raw/', blank=True, null=True)
     # image_url = models.CharField(max_length=200, blank=True)
     health_status = models.CharField(max_length=200, blank=True)
-    record_date = models.DateField(default=timezone.now)
+    # record_date = models.DateField(default=timezone.now)
+    record_date = models.DateField(auto_now_add=True)
     broiler_id = models.ForeignKey(broilersDetail, on_delete=models.CASCADE)  
     supervisor = models.ForeignKey(usersDetail, on_delete=models.CASCADE, null=True, blank=True)
     def __str__(self):
@@ -40,6 +43,6 @@ class PhysicianDecision(models.Model):
     approval = models.BooleanField(default=True,null=True)
     feedback = models.TextField(blank=True)
     disease = models.TextField(max_length=200, null=True, default="")
-    created = models.DateField(default=timezone.now)
+    created = models.DateField(default=timezone.localdate)
     def __str__(self):
         return str(self.created)    
